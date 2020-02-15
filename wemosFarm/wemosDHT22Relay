@@ -1,0 +1,121 @@
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "DHT.h" 
+#include <DS1302.h>
+ 
+#define OLED_RESET 0  
+Adafruit_SSD1306 display(OLED_RESET);       //OLED Use D3, D4
+#define DHTPIN D7                           //DHT22 Temp & Humi Sensor
+#define DHTTYPE DHT22  
+DHT dht(DHTPIN, DHTTYPE);
+
+int Relay = D2;                             //LED Light
+DS1302 rtc(D10, D9, D8);                    //DS1302 RTC PINS
+Time LT
+;
+// set relay on off time for LED Light
+byte OnHour   = 17;
+byte OnMin    = 21;
+byte OffHour  = 17;
+byte OffMin   = 23;
+
+/** for motor pumping when water level sensor notice lack of water. 30 seconds.
+int WLevel = D8;
+int WRelay = D9;
+int WMotorTime = 30000;
+long offAt = 0;
+ **/
+ 
+void setup(){ 
+/**
+  pinMode(WLevel, INPUT_PULLUP);
+  pinMode(WRelay, OUTPUT);
+**/
+  rtc.halt(false);
+  rtc.writeProtect(false);
+  pinMode(Relay,OUTPUT);
+  digitalWrite(Relay, LOW);
+  
+ // The following lines can be commented out to use  before to use DS1302, set RTC simple code
+ // the values already stored in the DS1302
+ // rtc.setDOW(MONDAY);      // Set Day-of-Week to FRIDAY
+ // rtc.setTime(12, 0, 0);   // Set the time to 12:00:00 (24hr format)
+ // rtc.setDate(6, 2, 2020); // Set the date to August 6th, 2019 
+    
+  Serial.begin(9600);
+  dht.begin();
+  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
+  display.display();
+} 
+ 
+void loop(){
+  // Reading temperature or humidity takes about 250 milliseconds!
+  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float f = dht.readTemperature(true);
+  // Check if any reads failed and exit early (to try again).
+  if (isnan(h) || isnan(t) || isnan(f)) 
+  {
+    Serial.println("Failed to read from DHT sensor!");
+    return;
+  }
+  //temp in c
+
+  delay(200);    
+  display.clearDisplay();  
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(5,1);    
+  display.print("T:");
+  display.print(t);
+  display.println("C");
+
+  display.setTextSize(2 );
+  display.setTextColor(WHITE);
+  display.setCursor(5,10);   
+  display.print("H:");
+  display.print(h);
+  display.println(" %");
+  display.display();
+
+  LT = rtc.getTime();
+  Serial.print(LT.hour);
+  Serial.print(":");
+  Serial.print(LT.min);
+  Serial.print(":");
+  Serial.println(LT.sec);
+    
+  if (LT.hour == OnHour && LT.min == OnMin) {
+    digitalWrite(Relay,HIGH);
+    Serial.println("LIGHT ON");
+  }else if (LT.hour == OffHour && LT.min == OffMin) {
+    digitalWrite(Relay,LOW);
+    Serial.println("LIGHT OFF"); 
+  }
+ delay (1000);
+ 
+  
+  Serial.print("T:");
+  Serial.print(t);
+  Serial.println("C");
+  Serial.print("H:");
+  Serial.print(h);
+  Serial.println(" %");
+
+/** lack of water, then pump power on for 30 seconds 
+ if((digitalRead(WRelay) == LOW ) && (digitalRead(WLevel) == LOW) ){ //Water Pump Relay is low, Water Level is sufficent
+    digitalWrite(WRelay, HIGH);
+    offAt = millis() + WMotorTime; //store var of now + 30 seconds  
+   }  
+ if(digitalRead(WRelay) == HIGH){ //WRelay is On
+   if(millis() >= offAt){ //see if it's time to turn off WRelay
+     digitalWrite(WRelay, LOW); //it's time. this also re-enables the button   
+    }
+  }
+  **/
+  
+}
