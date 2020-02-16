@@ -11,15 +11,21 @@ Adafruit_SSD1306 display(OLED_RESET);       //OLED Use D3, D4
 #define DHTTYPE DHT22  
 DHT dht(DHTPIN, DHTTYPE);
 
-int Relay = D2;                             //LED Light
+int LEDRelay = D2;                             //LED Light
 DS1302 rtc(D10, D9, D8);                    //DS1302 RTC PINS
 Time LT
 ;
 // set relay on off time for LED Light
-byte OnHour   = 17;
-byte OnMin    = 21;
-byte OffHour  = 17;
-byte OffMin   = 23;
+byte OnHour   = 17;                         // LED Light On Hour
+byte OnMin    = 21;                         // LED Light On Minute
+byte OffHour  = 17;                         // LED Light Off Hour
+byte OffMin   = 23;                         // LED Light Off Minute
+
+int WMotor = D5;                             //Water Pump or Oxygan Pump
+int WMState = LOW;
+unsigned long WMpreviousMillis = 0;
+long WMOnTime = 3000;                       //Water Pump on time
+long WMOffTime = 10000;
 
 /** for motor pumping when water level sensor notice lack of water. 30 seconds.
 int WLevel = D8;
@@ -35,8 +41,10 @@ void setup(){
 **/
   rtc.halt(false);
   rtc.writeProtect(false);
-  pinMode(Relay,OUTPUT);
-  digitalWrite(Relay, LOW);
+  pinMode(LEDRelay,OUTPUT);
+  digitalWrite(LEDRelay, LOW);
+
+  pinMode(WMotor, OUTPUT);
   
  // The following lines can be commented out to use  before to use DS1302, set RTC simple code
  // the values already stored in the DS1302
@@ -46,8 +54,8 @@ void setup(){
     
   Serial.begin(9600);
   dht.begin();
-  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 64x48)
+ 
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);                // initialize with the I2C addr 0x3C (for the 64x48)
   display.display();
 } 
  
@@ -90,21 +98,33 @@ void loop(){
   Serial.println(LT.sec);
     
   if (LT.hour == OnHour && LT.min == OnMin) {
-    digitalWrite(Relay,HIGH);
+    digitalWrite(LEDRelay,HIGH);
     Serial.println("LIGHT ON");
   }else if (LT.hour == OffHour && LT.min == OffMin) {
-    digitalWrite(Relay,LOW);
+    digitalWrite(LEDRelay,LOW);
     Serial.println("LIGHT OFF"); 
   }
- delay (1000);
- 
-  
+
+ unsigned long WMcurrentMillis = millis();
+ if((WMState == HIGH) && (WMcurrentMillis - WMpreviousMillis >= WMOnTime)){
+    WMState = LOW;  // Turn it off
+    WMpreviousMillis = WMcurrentMillis;  // Remember the time
+    digitalWrite(WMotor,  WMState);  // Update the actual LED
+  }
+  else if (( WMState == LOW) && (WMcurrentMillis - WMpreviousMillis >= WMOffTime)){
+     WMState = HIGH;  // turn it on
+    WMpreviousMillis = WMcurrentMillis;   // Remember the time
+    digitalWrite(WMotor,  WMState);    // Update the actual LED
+  }
+     
   Serial.print("T:");
   Serial.print(t);
   Serial.println("C");
   Serial.print("H:");
   Serial.print(h);
   Serial.println(" %");
+ 
+  delay (1000);
 
 /** lack of water, then pump power on for 30 seconds 
  if((digitalRead(WRelay) == LOW ) && (digitalRead(WLevel) == LOW) ){ //Water Pump Relay is low, Water Level is sufficent
