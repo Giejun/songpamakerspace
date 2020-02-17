@@ -1,3 +1,9 @@
+/** Before use this cose.. Need Set time
+ *  To set real time, use differenct library..We recommend https://github.com/Makuna/Rtc library. 
+ *  This code is for make LED Smart Farm in door 
+ */
+
+
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -13,13 +19,17 @@ DHT dht(DHTPIN, DHTTYPE);
 
 int LEDRelay = D2;                             //LED Light
 DS1302 rtc(D10, D9, D8);                    //DS1302 RTC PINS
-Time LT
-;
+Time LT, FANT;
+
+int FAN = D6;                               //FAN for Temp & Humi
+int maxHum = 60;
+int maxTemp = 34;
+
 // set relay on off time for LED Light
-byte OnHour   = 17;                         // LED Light On Hour
-byte OnMin    = 21;                         // LED Light On Minute
-byte OffHour  = 17;                         // LED Light Off Hour
-byte OffMin   = 23;                         // LED Light Off Minute
+byte OnHour = 17;                         // LED Light On Hour
+byte OnMin = 21;                         // LED Light On Minute
+byte OffHour = 17;                         // LED Light Off Hour
+byte OffMin = 23;                         // LED Light Off Minute
 
 int WMotor = D5;                             //Water Pump or Oxygan Pump
 int WMState = LOW;
@@ -44,34 +54,42 @@ void setup(){
   pinMode(LEDRelay,OUTPUT);
   digitalWrite(LEDRelay, LOW);
 
+  pinMode(FAN, OUTPUT);
   pinMode(WMotor, OUTPUT);
   
  // The following lines can be commented out to use  before to use DS1302, set RTC simple code
  // the values already stored in the DS1302
- // rtc.setDOW(MONDAY);      // Set Day-of-Week to FRIDAY
- // rtc.setTime(12, 0, 0);   // Set the time to 12:00:00 (24hr format)
- // rtc.setDate(6, 2, 2020); // Set the date to August 6th, 2019 
+ //rtc.setDOW(MONDAY);      // Set Day-of-Week to FRIDAY
+ //rtc.setTime(18, 08, 0);   // Set the time to 12:00:00 (24hr format)
+ //rtc.setDate(17, 2, 2020); // Set the date to August 6th, 2019 
     
-  Serial.begin(9600);
-  dht.begin();
- 
+  dht.begin(); 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);                // initialize with the I2C addr 0x3C (for the 64x48)
   display.display();
+
+  Serial.begin(9600);
 } 
  
 void loop(){
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+    
+  //***********************************************Sensing Temp & Humidity 
+  // Reading temperature or humidity takes about 250 milliseconds! 
   float h = dht.readHumidity();
   float t = dht.readTemperature();
-  float f = dht.readTemperature(true);
+  float f = dht.readTemperature(true);  
   // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f)) 
-  {
+  if (isnan(h) || isnan(t) || isnan(f)){
     Serial.println("Failed to read from DHT sensor!");
     return;
-  }
+   }
   //temp in c
+
+  if(h > maxHum || t > maxTemp){
+    digitalWrite(FAN, HIGH);
+   } 
+  else{
+    digitalWrite(FAN, LOW); 
+   }
 
   delay(200);    
   display.clearDisplay();  
@@ -90,6 +108,8 @@ void loop(){
   display.println(" %");
   display.display();
 
+
+//***************************************************** Plant LED ON OFF Control
   LT = rtc.getTime();
   Serial.print(LT.hour);
   Serial.print(":");
@@ -105,6 +125,7 @@ void loop(){
     Serial.println("LIGHT OFF"); 
   }
 
+//****************************************************** water Motor or Oxygen Pump Control
  unsigned long WMcurrentMillis = millis();
  if((WMState == HIGH) && (WMcurrentMillis - WMpreviousMillis >= WMOnTime)){
     WMState = LOW;  // Turn it off
