@@ -1,4 +1,4 @@
-/** Before use this cose.. Need Set time
+/* Before use this code.. Need Set time
  *  To set real time, use differenct library..We recommend https://github.com/Makuna/Rtc library. 
  *  This code is for make LED Smart Farm in door 
  *  
@@ -8,6 +8,8 @@
  *  DS1302 RTC Module use D8, D9, D10;
  *  FAN for control Temp & Humidiy use D6;
  *  Water Motor to supply water at water tube use D5;
+ *
+ *
  */
 
 #include <SPI.h>
