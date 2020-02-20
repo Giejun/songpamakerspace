@@ -1,8 +1,14 @@
 /** Before use this cose.. Need Set time
  *  To set real time, use differenct library..We recommend https://github.com/Makuna/Rtc library. 
  *  This code is for make LED Smart Farm in door 
+ *  
+ *  Smart Farm LED LIGHT = D2;
+ *  Temp & Humidity Sensor (DHT22) = D7;
+ *  OLED Display use D3, D4;
+ *  DS1302 RTC Module use D8, D9, D10;
+ *  FAN for control Temp & Humidiy use D6;
+ *  Water Motor to supply water at water tube use D5;
  */
-
 
 #include <SPI.h>
 #include <Wire.h>
@@ -10,6 +16,18 @@
 #include <Adafruit_SSD1306.h>
 #include "DHT.h" 
 #include <DS1302.h>
+
+#include "ThingSpeak.h"
+#include <ESP8266WiFi.h>
+
+WiFiClient client;
+int status = WL_IDLE_STATUS;
+const char *ssid =  "ktEgg_05da";     // replace with your wifi ssid and wpa2 key
+const char *pass =  "info06398";
+
+unsigned long myChannelNumber = 995603; // modify this with your own Channel Number
+//const char * myReadAPIKey = "7KS3OBQKJBJS08DJ";
+const char * myWriteAPIKey = "8O39AZW3EMKOSAQ0";  
  
 #define OLED_RESET 0  
 Adafruit_SSD1306 display(OLED_RESET);       //OLED Use D3, D4
@@ -17,20 +35,24 @@ Adafruit_SSD1306 display(OLED_RESET);       //OLED Use D3, D4
 #define DHTTYPE DHT22  
 DHT dht(DHTPIN, DHTTYPE);
 
-int LEDRelay = D2;                             //LED Light
-DS1302 rtc(D10, D9, D8);                    //DS1302 RTC PINS
+DS1302 rtc(D10, D9, D8);                     //DS1302 RTC PINS
 Time LT, FANT;
 
-int FAN = D6;                               //FAN for Temp & Humi
+// to Control temp & Humidity use Fan
+int FAN = D6;                                //FAN for Temp & Humi
 int maxHum = 60;
 int maxTemp = 34;
 
 // set relay on off time for LED Light
-byte OnHour = 17;                         // LED Light On Hour
-byte OnMin = 21;                         // LED Light On Minute
-byte OffHour = 17;                         // LED Light Off Hour
-byte OffMin = 23;                         // LED Light Off Minute
+int LEDRelay = D2;                           //LED Light
+int LED_readValue;
 
+byte OnHour = 22;                           // LED Light On Hour
+byte OnMin = 00;                            // LED Light On Minute
+byte OffHour = 22;                          // LED Light Off Hour
+byte OffMin = 03;                           // LED Light Off Minute
+
+// Set Water supply at plant rood use WMotor
 int WMotor = D5;                             //Water Pump or Oxygan Pump
 int WMState = LOW;
 unsigned long WMpreviousMillis = 0;
@@ -51,6 +73,20 @@ void setup(){
 **/
   rtc.halt(false);
   rtc.writeProtect(false);
+
+  delay(10);               
+  Serial.println("Connecting to ");
+  Serial.println(ssid);  
+  WiFi.begin(ssid, pass); 
+  while (WiFi.status() != WL_CONNECTED){
+         delay(500);
+         Serial.print(".");
+        }
+  Serial.println("");
+  Serial.println("WiFi connected"); 
+    
+  ThingSpeak.begin(client);
+  
   pinMode(LEDRelay,OUTPUT);
   digitalWrite(LEDRelay, LOW);
 
@@ -71,7 +107,7 @@ void setup(){
 } 
  
 void loop(){
-    
+      
   //***********************************************Sensing Temp & Humidity 
   // Reading temperature or humidity takes about 250 milliseconds! 
   float h = dht.readHumidity();
@@ -137,7 +173,13 @@ void loop(){
     WMpreviousMillis = WMcurrentMillis;   // Remember the time
     digitalWrite(WMotor,  WMState);    // Update the actual LED
   }
-     
+
+//*******************************************************  Display sensor & status at ThingSpeak
+  LED_readValue = digitalRead(LEDRelay);
+  Serial.print(LEDRelay);
+  ThingSpeak.writeField(myChannelNumber, 1, LED_readValue, myWriteAPIKey);  //Update in ThingSpeak
+  
+//********************************************************* Serial.print    
   Serial.print("T:");
   Serial.print(t);
   Serial.println("C");
@@ -145,8 +187,9 @@ void loop(){
   Serial.print(h);
   Serial.println(" %");
  
-  delay (1000);
+  delay (10000);
 
+//******************************************************** When you Change WMotor to Wrelay
 /** lack of water, then pump power on for 30 seconds 
  if((digitalRead(WRelay) == LOW ) && (digitalRead(WLevel) == LOW) ){ //Water Pump Relay is low, Water Level is sufficent
     digitalWrite(WRelay, HIGH);
@@ -157,6 +200,5 @@ void loop(){
      digitalWrite(WRelay, LOW); //it's time. this also re-enables the button   
     }
   }
-  **/
-  
+  **/  
 }
