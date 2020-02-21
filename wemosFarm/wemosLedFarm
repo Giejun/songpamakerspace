@@ -1,4 +1,4 @@
-/* Before use this code.. Need Set time
+/** Before use this cose.. Need Set time
  *  To set real time, use differenct library..We recommend https://github.com/Makuna/Rtc library. 
  *  This code is for make LED Smart Farm in door 
  *  
@@ -8,8 +8,6 @@
  *  DS1302 RTC Module use D8, D9, D10;
  *  FAN for control Temp & Humidiy use D6;
  *  Water Motor to supply water at water tube use D5;
- *
- *
  */
 
 #include <SPI.h>
@@ -25,9 +23,9 @@
 WiFiClient client;
 int status = WL_IDLE_STATUS;
 const char *ssid =  "ktEgg_05da";     // replace with your wifi ssid and wpa2 key
-const char *pass =  "info06***";
+const char *pass =  "info06398";
 
-unsigned long myChannelNumber = *******; // modify this with your own Channel Number
+unsigned long myChannelNumber = 995603; // modify this with your own Channel Number
 //const char * myReadAPIKey = "7KS3OBQKJBJS08DJ";
 const char * myWriteAPIKey = "8O39AZW3EMKOSAQ0";  
  
@@ -42,37 +40,28 @@ Time LT, FANT;
 
 // to Control temp & Humidity use Fan
 int FAN = D6;                                //FAN for Temp & Humi
-int maxHum = 60;
-int maxTemp = 34;
+int FAN_readValue;
+int maxHum = 30;
+int maxTemp = 25;
 
 // set relay on off time for LED Light
 int LEDRelay = D2;                           //LED Light
 int LED_readValue;
 
-byte OnHour = 22;                           // LED Light On Hour
+byte OnHour = 18;                           // LED Light On Hour
 byte OnMin = 00;                            // LED Light On Minute
 byte OffHour = 22;                          // LED Light Off Hour
 byte OffMin = 03;                           // LED Light Off Minute
 
 // Set Water supply at plant rood use WMotor
 int WMotor = D5;                             //Water Pump or Oxygan Pump
+int WMotor_readValue;
 int WMState = LOW;
 unsigned long WMpreviousMillis = 0;
-long WMOnTime = 3000;                       //Water Pump on time
-long WMOffTime = 10000;
-
-/** for motor pumping when water level sensor notice lack of water. 30 seconds.
-int WLevel = D8;
-int WRelay = D9;
-int WMotorTime = 30000;
-long offAt = 0;
- **/
+long WMOnTime = 30000;                       //Water Pump on time
+long WMOffTime = 10000;                     // To set Water Pump operate time, work 3secs per 10secs
  
 void setup(){ 
-/**
-  pinMode(WLevel, INPUT_PULLUP);
-  pinMode(WRelay, OUTPUT);
-**/
   rtc.halt(false);
   rtc.writeProtect(false);
 
@@ -137,7 +126,7 @@ void loop(){
   display.print("T:");
   display.print(t);
   display.println("C");
-
+  
   display.setTextSize(2 );
   display.setTextColor(WHITE);
   display.setCursor(5,10);   
@@ -145,8 +134,7 @@ void loop(){
   display.print(h);
   display.println(" %");
   display.display();
-
-
+ 
 //***************************************************** Plant LED ON OFF Control
   LT = rtc.getTime();
   Serial.print(LT.hour);
@@ -167,19 +155,25 @@ void loop(){
  unsigned long WMcurrentMillis = millis();
  if((WMState == HIGH) && (WMcurrentMillis - WMpreviousMillis >= WMOnTime)){
     WMState = LOW;  // Turn it off
-    WMpreviousMillis = WMcurrentMillis;  // Remember the time
-    digitalWrite(WMotor,  WMState);  // Update the actual LED
-  }
-  else if (( WMState == LOW) && (WMcurrentMillis - WMpreviousMillis >= WMOffTime)){
-     WMState = HIGH;  // turn it on
-    WMpreviousMillis = WMcurrentMillis;   // Remember the time
-    digitalWrite(WMotor,  WMState);    // Update the actual LED
-  }
+    WMpreviousMillis = WMcurrentMillis;                                                         // Remember the time    
+      digitalWrite(WMotor,  WMState);                                                           // Update the actual LED
+     }
+     else if (( WMState == LOW) && (WMcurrentMillis - WMpreviousMillis >= WMOffTime)){
+        WMState = HIGH;                                                                          // turn it on 
+        WMpreviousMillis = WMcurrentMillis;                                                      // Remember the time
+       digitalWrite(WMotor,  WMState);                                                           // Update the actual LED
+       }
 
 //*******************************************************  Display sensor & status at ThingSpeak
   LED_readValue = digitalRead(LEDRelay);
-  Serial.print(LEDRelay);
-  ThingSpeak.writeField(myChannelNumber, 1, LED_readValue, myWriteAPIKey);  //Update in ThingSpeak
+  FAN_readValue = digitalRead(FAN);
+  WMotor_readValue = digitalRead(WMotor);
+   
+  ThingSpeak.writeField(myChannelNumber, 1, LED_readValue, myWriteAPIKey);    //Update in ThingSpeak
+  ThingSpeak.writeField(myChannelNumber, 2, t, myWriteAPIKey); 
+  ThingSpeak.writeField(myChannelNumber, 3, h, myWriteAPIKey); 
+  ThingSpeak.writeField(myChannelNumber, 4, FAN_readValue, myWriteAPIKey); 
+  ThingSpeak.writeField(myChannelNumber, 5, WMotor_readValue, myWriteAPIKey); 
   
 //********************************************************* Serial.print    
   Serial.print("T:");
@@ -188,19 +182,10 @@ void loop(){
   Serial.print("H:");
   Serial.print(h);
   Serial.println(" %");
- 
-  delay (10000);
 
-//******************************************************** When you Change WMotor to Wrelay
-/** lack of water, then pump power on for 30 seconds 
- if((digitalRead(WRelay) == LOW ) && (digitalRead(WLevel) == LOW) ){ //Water Pump Relay is low, Water Level is sufficent
-    digitalWrite(WRelay, HIGH);
-    offAt = millis() + WMotorTime; //store var of now + 30 seconds  
-   }  
- if(digitalRead(WRelay) == HIGH){ //WRelay is On
-   if(millis() >= offAt){ //see if it's time to turn off WRelay
-     digitalWrite(WRelay, LOW); //it's time. this also re-enables the button   
-    }
-  }
-  **/  
+  Serial.println(LED_readValue);
+  Serial.println(FAN_readValue);
+  Serial.println(WMotor_readValue);
+  delay (1000);
+
 }
