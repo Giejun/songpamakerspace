@@ -25,9 +25,9 @@
 WiFiClient client;
 int status = WL_IDLE_STATUS;
 const char *ssid =  "ktEgg_05da";     // replace with your wifi ssid and wpa2 key
-const char *pass =  "info06398";
+const char *pass =  "info06***";
 
-unsigned long myChannelNumber = 995603; // modify this with your own Channel Number
+unsigned long myChannelNumber = *******; // modify this with your own Channel Number
 //const char * myReadAPIKey = "7KS3OBQKJBJS08DJ";
 const char * myWriteAPIKey = "8O39AZW3EMKOSAQ0";  
  
