@@ -22,6 +22,7 @@ LiquidCrystal_I2C lcd(0x27,20,4);             // set the LCD address to 0x27 for
 #define buzzer 13                             // buzzer alarm, 9, 12 lack of water
 #define WATER_LEVEL 9                         // water level in tube
 #define WATER_TANK 12                         // water level in tank
+
 #define ONE_WIRE_BUS 7                        //DS18B20 water Temperature
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature waterTemp(&oneWire);
@@ -60,6 +61,8 @@ void setup(){
   Serial.begin(57600);
 
   pinMode(buzzer, OUTPUT);
+  pinMode(WATER_LEVEL, INPUT);
+  pinMode(WATER_TANK, INPUT);  
   pinMode(FAN, OUTPUT);
   pinMode(LEDRelay,OUTPUT);
   pinMode(TOUCHSW, INPUT);
@@ -80,7 +83,7 @@ void setup(){
   
   }
 
-void loop(void){ 
+void loop(){ 
 
   //---------------------------------------------- DS18B20 ------------------------------------------------------//
   waterTemp.requestTemperatures();  
@@ -211,19 +214,6 @@ void loop(void){
   delay(1000);
 }
 
-void buzz(){
-  unsigned long interval=1000; 
-  unsigned long previousMillis=0; 
-
-  bool buzzerState = false;
-
-  unsigned long currentMillis = millis();
-  if((unsigned long)(currentMillis - previousMillis) >= interval){
-     buzzerState =! buzzerState;
-     tone(buzzer, 1000, 200);
-     previousMillis = millis();
-  }
- }
 
 // ------------------------------ DS3231 RCT ; Convert normal decimal numbers to binary coded decimal ------------------//
 byte decToBcd(byte val){
