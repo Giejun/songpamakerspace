@@ -19,7 +19,7 @@
 LiquidCrystal_I2C lcd(0x27,20,4);             // set the LCD address to 0x27 for a 16 chars and 2 line display
 #define DS3231_I2C_ADDRESS 104                // DS3231's general addres ; 0x68, 0x57 to change decimal 0x57 is 87, 0x68 is 104
 
-#define buzzer 13                             // buzzer alarm, 9, 12 lack of water
+#define BUZZER 13                             // buzzer alarm, 9, 12 lack of water
 #define WATER_LEVEL 9                         // water level in tube
 #define WATER_TANK 12                         // water level in tank
 
@@ -60,9 +60,9 @@ char my_array[100];                        // Character array for printing somet
 void setup(){
   Serial.begin(57600);
 
-  pinMode(buzzer, OUTPUT);
-  pinMode(WATER_LEVEL, INPUT);
-  pinMode(WATER_TANK, INPUT);  
+  pinMode(BUZZER, OUTPUT);
+  pinMode(WATER_LEVEL, INPUT_PULLUP);
+  pinMode(WATER_TANK, INPUT_PULLUP);  
   pinMode(FAN, OUTPUT);
   pinMode(LEDRelay,OUTPUT);
   pinMode(TOUCHSW, INPUT);
@@ -136,8 +136,8 @@ void loop(){
   Serial.print("RTC Temp: "); 
   Serial.println(my_temp);
 
-  Serial.print("DS18B20:");
-  Serial.println(waterTemp.getTempCByIndex(0));
+ Serial.print("DS18B20:");
+ Serial.println(waterTemp.getTempCByIndex(0));
   
   // NOTE: Arduino does NOT implement printing floats to a string.
   // If you use the std C function : sprintf(my_array, "Temp: %4.2f", my_temp), It will NOT CONVERT.
@@ -183,8 +183,16 @@ void loop(){
     digitalWrite(LEDRelay, LOW);
     Serial.println("LIGHT OFF");
   }
- 
 
+//-------------------------------------------------- WATER LEVEL -----------------------------------//
+
+  int WATER_LEVEL_VAL = digitalRead(WATER_LEVEL);
+  int WATER_TANK_VAL = digitalRead(WATER_TANK);
+ 
+  Serial.print(WATER_LEVEL_VAL);
+  Serial.println(WATER_TANK_VAL);  
+
+  
 
 //---------------------------------------- Display LCD 2004 -------------------------------------//
  sprintf(my_array, "%d:%d:%d", hours, minutes, seconds);
@@ -253,7 +261,6 @@ void set3231Date(){
   Wire.write(decToBcd(year));
   Wire.endTransmission();
 }
-
 
 void get3231Date(){
   // send request to receive data starting at register 0
