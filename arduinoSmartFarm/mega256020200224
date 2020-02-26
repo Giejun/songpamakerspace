@@ -16,32 +16,41 @@
 #include "DHT.h" 
 #include <LiquidCrystal_I2C.h>   
 
+#define BUZZER         13                     // buzzer alarm, 9, 12 lack of water
+#define WATER_TANK     12                     // water level in tank
+#define ONE_WIRE_BUS    7                     //DS18B20 water Temperature
+#define DHTPIN          8                     //DHT22 Temp & Humi Sensor
+#define FAN            39                     // to Control temp & Humidity use Fan FAN for Temp & Humi
+#define LEDRelay       31                     //LED Light & Light Switch
+#define TOUCHSW        10                     // for LED Light ON OFF
+#define OXY            41                     // Supply Oxygent to water
+#define WATER_PUMP     37                     // Supply Water from Tank  to Root
+
+
 LiquidCrystal_I2C lcd(0x27,20,4);             // set the LCD address to 0x27 for a 16 chars and 2 line display
 #define DS3231_I2C_ADDRESS 104                // DS3231's general addres ; 0x68, 0x57 to change decimal 0x57 is 87, 0x68 is 104
 
-#define BUZZER 13                             // buzzer alarm, 9, 12 lack of water
-#define WATER_LEVEL 9                         // water level in tube
-#define WATER_TANK 12                         // water level in tank
+int BUZZER_State = LOW;                       //D13 Buzzer & Buzzer sound
+const int onDuration = 1000;
+const int periodDuration = 5000;
+unsigned long lastPeriodStart;
 
-#define ONE_WIRE_BUS 7                        //DS18B20 water Temperature
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire oneWire(ONE_WIRE_BUS);                //D7, DS18B20 Temperature Sensor
 DallasTemperature waterTemp(&oneWire);
 
-#define DHTPIN 8                              //DHT22 Temp & Humi Sensor
-#define DHTTYPE DHT22  
+#define DHTTYPE DHT22                         //D8, DHT22 Temp & Humi sensor
 DHT dht(DHTPIN, DHTTYPE);
 
-#define FAN  39                               // to Control temp & Humidity use Fan FAN for Temp & Humi
-int FAN_readValue;
-int maxHum = 30;                             // *** TO BE SET VALUE BY USED ROTARY ENCODER
+
+/****************************** Review & develop ******************************/
+int FAN_readValue;                            // Fan for controlling temp & humi, and supply oxygen to leaf.
+int maxHum = 30;                              // TO BE SET VALUE BY USED ROTARY ENCODER
 int maxTemp = 25;
 
-#define LEDRelay 31                          //LED Light & Light Switch
-int LED_readValue;
-    
-#define TOUCHSW 10                          // for LED Light ON OFF
 
-boolean TOUCHSW_currentState = LOW;
+int LED_readValue;                            //D31 Relay for LED Light controlling
+
+boolean TOUCHSW_currentState = LOW;           //LED Light is ON/OFF
 boolean TOUCHSW_lastState = LOW;
 boolean LEDRelay_state = LOW;
 
@@ -54,18 +63,33 @@ byte seconds, minutes, hours, day, date, month, year;
 char weekDay[4];
 byte tMSB, tLSB;
 float my_temp;
-char my_array[100];                        // Character array for printing something.
+char my_array[100];                                      // Character array for printing something.
+
+
+/*********** develop set on off time with encoder  *****************/
+const unsigned int pumpOnTime = 10*1000;                 // Control Water Pump ON TIME, SET TIME USE ENCODER
+const unsigned int pumpOffTime = 30*1000;                // Control Water Pump OFF TIME, SET TIME USE ENCODER 
+unsigned long pumpPreMillis = 0;
+int pumpInterval = pumpOnTime;
+boolean pumpState = true;
+
+const unsigned int OxyOnTime = 5*1000;                 // Control Oxygen relay ON TIME, SET TIME USE ENCODER
+const unsigned int OxyOffTime = 20*1000;                // Control Oxygen relay OFF TIME, SET TIME USE ENCODER 
+unsigned long OxyPreMillis = 0;
+int OxyInterval = OxyOnTime;
+boolean OxyState = true;
 
 
 void setup(){
   Serial.begin(57600);
 
   pinMode(BUZZER, OUTPUT);
-  pinMode(WATER_LEVEL, INPUT_PULLUP);
   pinMode(WATER_TANK, INPUT_PULLUP);  
   pinMode(FAN, OUTPUT);
   pinMode(LEDRelay,OUTPUT);
   pinMode(TOUCHSW, INPUT);
+  pinMode(OXY, OUTPUT);
+  pinMode(WATER_PUMP,OUTPUT);
   digitalWrite(LEDRelay, LOW);  
   
   Wire.begin();
@@ -80,7 +104,6 @@ void setup(){
   lcd.print("ver: 0.9");
   delay(3000);  
   lcd.clear();
-  
   }
 
 void loop(){ 
@@ -98,11 +121,12 @@ void loop(){
     Serial.println("Failed to read from DHT sensor!");
     return;
     }
-
    if(h > maxHum || t > maxTemp){                                    // FAN CONTROLED
     digitalWrite(FAN, HIGH);
    } 
   else{
+
+    // 정기적 펜 동작 코드 삽입*************************************************************************************
     digitalWrite(FAN, LOW); 
    }
     
@@ -184,17 +208,53 @@ void loop(){
     Serial.println("LIGHT OFF");
   }
 
-//-------------------------------------------------- WATER LEVEL -----------------------------------//
+//-------------------------------------------------- WATER TANK ALRAM -----------------------------------//
 
-  int WATER_LEVEL_VAL = digitalRead(WATER_LEVEL);
   int WATER_TANK_VAL = digitalRead(WATER_TANK);
- 
-  Serial.print(WATER_LEVEL_VAL);
+   
+ if(WATER_TANK_VAL == LOW){
+    if(millis() - lastPeriodStart >= periodDuration) {
+    lastPeriodStart += periodDuration;
+    tone(BUZZER, 550, onDuration);
+  } 
+}
   Serial.println(WATER_TANK_VAL);  
 
-  
+//---------------------------------------- D37 Relay for water Pump --------------------//
 
-//---------------------------------------- Display LCD 2004 -------------------------------------//
+digitalWrite(WATER_PUMP, pumpState);
+unsigned long pumpCurrentMillis = millis();
+if((unsigned long)(pumpCurrentMillis - pumpPreMillis) >= pumpInterval){
+  if(pumpState){
+    pumpInterval = pumpOffTime;
+    Serial.println(pumpState);
+  }
+  else{
+    pumpInterval = pumpOnTime;
+  }
+  pumpState = !(pumpState);
+  pumpPreMillis = pumpCurrentMillis;
+}
+
+//---------------------------------------- D41 Relay for Oxygen --------------------//
+
+digitalWrite(OXY, OxyState);
+unsigned long OxyCurrentMillis = millis();
+if((unsigned long)(OxyCurrentMillis - OxyPreMillis) >= pumpInterval){
+  if(OxyState){
+    OxyInterval = OxyOffTime;
+    Serial.println(OxyState);
+  }
+  else{
+   OxyInterval = OxyOnTime;
+  }
+  OxyState = !(OxyState);
+  OxyPreMillis = OxyCurrentMillis;
+}
+ 
+
+ 
+//---------------------------------------- Display LCD 2004 ----------------------------------------//
  sprintf(my_array, "%d:%d:%d", hours, minutes, seconds);
   lcd.clear();
   lcd.backlight();
