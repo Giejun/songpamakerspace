@@ -1,4 +1,4 @@
- /**
+/**
  *
  * Design for operate Smart Farm using LED, FAN, and Sensors.
  * Board: Mega2560
@@ -20,13 +20,13 @@
 
 #define BUZZER         13                           // buzzer alarm, 9, 12 lack of water
 #define WATER_TANK     12                           // water level in tank
-#define ONE_WIRE_BUS   /*3*/ 7                      // DS18B20 water Temperature
-#define DHTPIN         /*4*/ 8                      // DHT22 Temp & Humi Sensor
-#define FAN            /*8*/ 39                     // to Control temp & Humidity use Fan FAN for Temp & Humi
-#define LEDRelay       /*9*/ 31                     // LED Light & Light Switch
+#define ONE_WIRE_BUS    7                           // DS18B20 water Temperature
+#define DHTPIN          8                           // DHT22 Temp & Humi Sensor
+#define FAN            39                           // to Control temp & Humidity use Fan FAN for Temp & Humi
+#define LEDRelay       31                           // LED Light & Light Switch
 #define TOUCHSW        10                           // for LED Light ON OFF
-#define OXY            /*1*/ 41                     // Supply Oxygent to water
-#define WATER_PUMP     /*2*/ 37                     // Supply Water from Tank  to Root
+#define OXY            41                           // Supply Oxygent to water
+#define WATER_PUMP     37                           // Supply Water from Tank  to Root
 
 #define ENCODER_PIN_DT  2
 #define ENCODER_PIN_CLK 3
@@ -35,12 +35,7 @@
 #define EEPROM_SETTINGS_ADDR  0
 
 
-// LCD&DS3231 using I2C interfacing so, using SDA(20), SCL(21)
-// DHT22 using PIN 8
-// LCD I2C address 0X27
-// ENCODER(DT,CLK,SW) 2, 3, 4
-
-/************ Menu ************/
+/************************************ Menu ********************************************/
 enum TMenu_Items_Ndx {ITEM_MAIN, ITEM_MENU, ITEM_LED, ITEM_PUMP, ITEM_FAN, ITEM_OXY, ITEM_BACK,
                       ITEM_LED_SET, ITEM_LED_ON, ITEM_LED_OFF, ITEM_LED_BACK,
 					             ITEM_LED_ON_H_SET, ITEM_LED_ON_M_SET, ITEM_LED_ON_S_SET, ITEM_LED_OFF_H_SET, ITEM_LED_OFF_M_SET, ITEM_LED_OFF_S_SET, 
@@ -70,8 +65,7 @@ typedef struct{
 } 
 TMenu_Aux_Struct;
 
-typedef struct
-{
+typedef struct{
   uint16_t OnHour;                           // LED Light On Hour
   uint16_t OnMin;                            // LED Light On Minute
   uint16_t OnSec;                            // LED Light On Second
@@ -95,12 +89,9 @@ typedef struct
   uint16_t oxyOffMin;
   unsigned long OxyPreMillis;
   boolean OxyState;
-} TSettings_Struct;
+}
+TSettings_Struct;
 
-// Change these two numbers to the pins connected to your encoder.
-//   Best Performance: both pins have interrupt capability
-//   Good Performance: only the first pin has interrupt capability
-//   Low Performance:  neither pin has interrupt capability
 Encoder myEnc(ENCODER_PIN_DT, ENCODER_PIN_CLK);
 
 LiquidCrystal_I2C lcd(0x27,20,4);             // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -116,6 +107,7 @@ DallasTemperature waterTemp(&oneWire);
 
 #define DHTTYPE DHT22                         //D8, DHT22 Temp & Humi sensor
 DHT dht(DHTPIN, DHTTYPE);
+float h, t, f;
 
 /****************************** Review & develop ******************************/
 //temperature and humidity is over maxTemp or maxHumi, then Fan is ON
@@ -123,8 +115,6 @@ DHT dht(DHTPIN, DHTTYPE);
 int FAN_readValue;                            // Fan for controlling temp & humi, and supply oxygen to leaf.
 int maxHum = 30;                              // TO BE SET VALUE BY USED ROTARY ENCODER
 int maxTemp = 25;
-
-
 
 // LED Light set and restriced by touch switch
 int LED_readValue;                            //D31 Relay for LED Light controlling
@@ -171,7 +161,6 @@ boolean OxyState = true;
 TSettings_Struct settings;
 uint8_t settings_changed;
 
-
 TMenu_Item_Strct menu[] = {{.item_parent = ITEM_MAIN, .item_child = ITEM_MENU, .item_prev = ITEM_MAIN, .item_next = ITEM_MENU, .item_start = ITEM_LED, .items_qty = 5, .param = NULL, .text = NULL},
                            {.item_parent = ITEM_MAIN, .item_child = END, .item_prev = END, .item_next = END, .item_start = ITEM_LED, .items_qty = 5, .param = NULL, .text = NULL},
                            {.item_parent = ITEM_MAIN, .item_child = ITEM_LED_SET, .item_prev = ITEM_BACK, .item_next = ITEM_PUMP, .item_start = ITEM_LED, .items_qty = 5, .param = NULL, .text = "Set LED1 Light time"},
@@ -210,12 +199,8 @@ TMenu_Item_Strct menu[] = {{.item_parent = ITEM_MAIN, .item_child = ITEM_MENU, .
                           };
 TMenu_Aux_Struct menu_aux_struct = {.current_ndx = ITEM_MAIN, .selected_ndx = ITEM_MAIN, .item_prev = ITEM_MAIN};
 
-float h, t, f;
-
-void printMenuStruct (void)
-{
-  for (uint8_t i = 0; i < sizeof (menu) / sizeof(TMenu_Item_Strct); i++)
-  {
+void printMenuStruct (void){
+  for (uint8_t i = 0; i < sizeof (menu) / sizeof(TMenu_Item_Strct); i++){
     Serial.print("\r\n");
     Serial.print(i);
     Serial.print(": Parent=");
@@ -229,30 +214,22 @@ void printMenuStruct (void)
     Serial.print(' ');
     Serial.println(menu[i].text);
   }
-
   return;
 }
 
-int settingsLoad (void)
-{
+int settingsLoad (void){
   int result = 0;
-
   EEPROM.get(EEPROM_SETTINGS_ADDR, settings);
-
   return result;
 }
 
-int settingsSave (void)
-{
+int settingsSave (void){
   int result = 0;
-
   EEPROM.put(EEPROM_SETTINGS_ADDR, settings);
-
   return result;
 }
 
-int settingsCheck (void)
-{
+int settingsCheck (void){
   int result = 0;
   if ( (settings.fanOffMin > 500) || (settings.fanOnMin > 500) || (settings.oxyOffMin > 500) || (settings.oxyOnMin > 500) || (settings.pumpOffMin > 500) || (settings.pumpOnMin > 500) )
 	result = -1;
@@ -266,8 +243,7 @@ int settingsCheck (void)
   return result;
 }
 
-void settingsInitDefault (void)
-{
+void settingsInitDefault (void){
 	settings.fanOffMin = fanOffMin;
 	settings.fanOnMin = fanOnMin;
 	settings.OffHour = OffHour;
@@ -292,8 +268,7 @@ void settingsInitDefault (void)
 	return;
 }
 
-void settingsPrint (void)
-{
+void settingsPrint (void){
 	Serial.print("\r\nSettings:");
 	Serial.print("\r\n\t fanOffMin=");
 	Serial.print(settings.fanOffMin);
@@ -339,8 +314,7 @@ void settingsPrint (void)
 	return;
 }
 
-void displayProcess (void)
-{
+void displayProcess (void){
   int32_t encoder_value = myEnc.read();
   uint32_t button_timer_ms, blink_timer_ms;
   static int8_t encoder_sw_prev = 0, menu_changed = 0, first_line = 0, blinkEn = 0;
@@ -349,11 +323,9 @@ void displayProcess (void)
   uint8_t encoder_active = 0;
   int8_t encoder_step;
 
-  if (millis() >= button_timer_ms)
-  {
+  if (millis() >= button_timer_ms){
 	encoder_sw = digitalRead(ENCODER_PIN_SW) ? 0 : 1;
-	if (!encoder_sw || encoder_sw_prev)
-  {
+	if (!encoder_sw || encoder_sw_prev){
     button_timer_ms = millis() + 200;
 	  encoder_sw = 0;
   }
