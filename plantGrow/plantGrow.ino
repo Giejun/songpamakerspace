@@ -104,6 +104,7 @@ void setup() {
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2021, 7, 30, 02, 40, 0));
   }
+   rtc.adjust(DateTime(2021, 8, 28, 8, 54, 0));
 
   dht.begin();
   DS_temp.begin();
