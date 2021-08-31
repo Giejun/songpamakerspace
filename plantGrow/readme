@@ -8,4 +8,18 @@ Adafruit_SH1106-master
 DHT_sensor_library
 Encoder, and
 OneWire
+DallasTemperature
+RTClib
+
+Use the parts;
+MCU : arduinoMega2560
+DHT22 temperature & humidity Sensor module (D4)
+DS18B20 temperature sensor (D7)
+Rotary Encoder (D2,D3, A0)
+4Relays (9, 10, 11, and 12)
+  LED_light (9)
+  coolingFan(10)
+  airCirculationFan(10)
+  oxygenPump(11)
+I2C for rtc(DS3231) and 1.3inch OLED
 
